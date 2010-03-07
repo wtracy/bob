@@ -1,0 +1,69 @@
+#!/usr/bin/python
+
+import glob, os, sys
+
+
+def output():
+	if 'GATEWAY_INTERFACE' in os.environ.keys():
+		print 'Content-type: text/html\n'
+		print '<html><head><title>BOB: Power Report for'
+		print os.environ.get('SERVER_NAME')
+		print '</title><meta http-equiv="refresh" content="30" /></head><body>'
+		#print '<table rules="rows" frame="box">'
+		print '<table>'
+		html = True
+	else:
+		html = False
+	index = 0
+	for ac in cables:
+		online = open(ac + '/online', 'r').readline()
+		if (online == '1\n'):
+			status = 'on-line'
+		elif online == '0\n':
+			status = 'off-line'
+		else:
+			status = 'read error'
+		if html:
+			print '<tr><td align="right">AC Adapter ' + repr(index) + ': </td>'
+			if status == 'on-line':
+				print '<td bgcolor="00FF00">'
+			else:
+				print '<td bgcolor="FF0000"><b><blink>'
+		
+			print status 
+			if status != 'on-line':
+				print '</blink></b>'
+			print '</td></tr>'
+		else:
+			print '  AC Adapter' + (repr(index).rjust(2)) + ': ' + status
+		++index
+	index = 0
+	for bat in batteries:
+		status = open(bat + '/status', 'r').readline().rstrip()
+		max = int(open(bat + '/charge_full', 'r').readline())
+		curr = int(open(bat + '/charge_now', 'r').readline())
+		charge = 100 * curr / max
+		if html:
+			if charge > 75:
+				color = '#00FF00'
+			elif charge > 50:
+				color = '#FFFF00'
+			elif charge > 25:
+				color = '#FF8000'
+			else:
+				color = '#FF0000'
+			print '<tr><td align="right">Battery ' + repr(index) + ': </td><td bgcolor="' + color + '">' + status + ', ' + repr(charge) + '%</td></tr>'
+		else:
+			print '     Battery' + (repr(index).rjust(2)) + ': ' + status + ', ' + repr(charge) + '%'
+		++index
+	if html:
+		print '</table></body></html>'
+
+
+batteries = glob.glob('/sys/class/power_supply/BAT*')
+cables = glob.glob('/sys/class/power_supply/AC*')
+
+if '-x' in sys.argv:
+	print 'X11 interface'
+else:
+	output()
