@@ -6,7 +6,7 @@ import glob, os, sys
 def output():
 	if 'GATEWAY_INTERFACE' in os.environ.keys():
 		print 'Content-type: text/html\n'
-		print '<html><head><title>BOB: Power Report for'
+		print '<html><head><title>BOB: Power status for'
 		print os.environ.get('SERVER_NAME')
 		print '</title><meta http-equiv="refresh" content="30" /></head><body>'
 		#print '<table rules="rows" frame="box">'
@@ -59,11 +59,40 @@ def output():
 	if html:
 		print '</table></body></html>'
 
+class BobGtk:
+   def quit(self, param):
+      return gtk.main_quit()
+
+   def contextMenu(self, icon, button, activate_time, data=None):
+       menu = gtk.Menu()
+
+       one = gtk.ImageMenuItem(gtk.STOCK_QUIT, "Quit")
+       one.connect('activate', self.quit)
+       menu.append(one)
+
+       menu.show_all()
+
+       menu.popup(None, None, gtk.status_icon_position_menu, button, activate_time, icon)
+       return True
+
+   def __init__(self):
+       self.tray = gtk.StatusIcon()
+       self.tray.set_from_file('plug.png')
+       self.tray.set_tooltip('bla bla bla')
+       #tray.set_from_file('laptop_battery.png')
+       #tray.set_blinking(True)
+       self.tray.connect('popup-menu', self.contextMenu)
 
 batteries = glob.glob('/sys/class/power_supply/BAT*')
 cables = glob.glob('/sys/class/power_supply/AC*')
 
 if '-x' in sys.argv:
-	print 'X11 interface'
+	import pygtk
+	pygtk.require("2.0")
+	import gtk
+
+	bobgtk = BobGtk()
+
+	gtk.main()
 else:
 	output()
