@@ -6,4 +6,5 @@ If you run Bob normally with no arguments on a system with a Linux kernel export
 
 Bob also has the ability to run as a CGI program. It will automatically detect that the presence of CGI environment variables, and produce HTML output.
 
-The code currently checked in is the result of one afternoon's hacking, so it's still a bit rough, but it works. I want to add support to run in the system icon tray; I'm still debating whether to do this via PyGTK or wxPython.
+I am working on support for running in the system tray via GTk+. This code is very much a work in progress. To activate it, run Bob with the -x argument.
+
