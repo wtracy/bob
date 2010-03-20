@@ -29,7 +29,7 @@ def getCableStatus(ac):
 		return 'read error'
 
 def getBatteryStatus(bat):
-	return open(bat + '/status', 'r').readline().rstrip()
+	return open(bat + '/status', 'r').readline().strip()
 
 def output():
 	if 'GATEWAY_INTERFACE' in os.environ.keys():
@@ -102,16 +102,17 @@ class BobGtk:
            self.tray.set_from_file('laptop_battery.png')
        text = ''
        index = 0
-       #for ac in cables:
-           #status = getCableStatus(ac)
-           #text += ' AC Adapter ' + (repr(index)) + ': ' + status
-           #++index
+       for ac in cables:
+           status = getCableStatus(ac)
+           text += 'AC Adapter ' + (repr(index)) + ': ' + status + '\n'
+           ++index
        index = 0
        for bat in batteries:
            status = getBatteryStatus(bat)
            charge = getCharge(bat)
            text += 'Battery ' + repr(index) + ': ' + status + ', ' + repr(charge) + '%\n'
            ++index
+       text = text.strip()
        self.tray.set_tooltip(text)
        return True
 
@@ -121,7 +122,7 @@ class BobGtk:
        #tray.set_from_file('laptop_battery.png')
        #tray.set_blinking(True)
        self.tray.connect('popup-menu', self.contextMenu)
-       gobject.timeout_add(200, self.timeout)
+       gobject.timeout_add(1000, self.timeout)
 
 batteries = glob.glob('/sys/class/power_supply/BAT*')
 cables = glob.glob('/sys/class/power_supply/AC*')
