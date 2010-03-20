@@ -3,6 +3,34 @@
 import glob, os, sys
 
 
+def isOnline(ac):
+	online = open(ac + '/online', 'r').readline()
+	return online == '1\n'
+
+def onAc(cables):
+	for ac in cables:
+		if (not isOnline(ac)):
+			return False
+	return True
+
+def getCharge(bat):
+	max = int(open(bat + '/charge_full', 'r').readline())
+	curr = int(open(bat + '/charge_now', 'r').readline())
+	charge = 100 * curr / max
+	return charge
+
+def getCableStatus(ac):
+	online = open(ac + '/online', 'r').readline()
+	if (online == '1\n'):
+		return 'on-line'
+	elif online == '0\n':
+		return 'off-line'
+	else:
+		return 'read error'
+
+def getBatteryStatus(bat):
+	return open(bat + '/status', 'r').readline().rstrip()
+
 def output():
 	if 'GATEWAY_INTERFACE' in os.environ.keys():
 		print 'Content-type: text/html\n'
@@ -16,13 +44,7 @@ def output():
 		html = False
 	index = 0
 	for ac in cables:
-		online = open(ac + '/online', 'r').readline()
-		if (online == '1\n'):
-			status = 'on-line'
-		elif online == '0\n':
-			status = 'off-line'
-		else:
-			status = 'read error'
+		status = getCableStatus(ac)
 		if html:
 			print '<tr><td align="right">AC Adapter ' + repr(index) + ': </td>'
 			if status == 'on-line':
@@ -39,10 +61,8 @@ def output():
 		++index
 	index = 0
 	for bat in batteries:
-		status = open(bat + '/status', 'r').readline().rstrip()
-		max = int(open(bat + '/charge_full', 'r').readline())
-		curr = int(open(bat + '/charge_now', 'r').readline())
-		charge = 100 * curr / max
+		status = getBatteryStatus(bat)
+		charge = getCharge(bat)
 		if html:
 			if charge > 75:
 				color = '#00FF00'
@@ -75,13 +95,33 @@ class BobGtk:
        menu.popup(None, None, gtk.status_icon_position_menu, button, activate_time, icon)
        return True
 
+   def timeout(self):
+       if (onAc(cables)):
+           self.tray.set_from_file('plug.png')
+       else:
+           self.tray.set_from_file('laptop_battery.png')
+       text = ''
+       index = 0
+       #for ac in cables:
+           #status = getCableStatus(ac)
+           #text += ' AC Adapter ' + (repr(index)) + ': ' + status
+           #++index
+       index = 0
+       for bat in batteries:
+           status = getBatteryStatus(bat)
+           charge = getCharge(bat)
+           text += 'Battery ' + repr(index) + ': ' + status + ', ' + repr(charge) + '%\n'
+           ++index
+       self.tray.set_tooltip(text)
+       return True
+
    def __init__(self):
        self.tray = gtk.StatusIcon()
        self.tray.set_from_file('plug.png')
-       self.tray.set_tooltip('bla bla bla')
        #tray.set_from_file('laptop_battery.png')
        #tray.set_blinking(True)
        self.tray.connect('popup-menu', self.contextMenu)
+       gobject.timeout_add(200, self.timeout)
 
 batteries = glob.glob('/sys/class/power_supply/BAT*')
 cables = glob.glob('/sys/class/power_supply/AC*')
@@ -90,6 +130,7 @@ if '-x' in sys.argv:
 	import pygtk
 	pygtk.require("2.0")
 	import gtk
+	import gobject
 
 	bobgtk = BobGtk()
 
