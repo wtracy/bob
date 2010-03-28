@@ -4,7 +4,7 @@ Bob is an acpiclient replacement written in Python. It monitors the power left i
 
 If you run Bob normally with no arguments on a system with a Linux kernel exporting the /sys/class interface (older kernels using the /proc/acpi inteface are unsupported) you will see output that is mostly compatible with acpiclient.
 
-Bob also has the ability to run as a CGI program. It will automatically detect that the presence of CGI environment variables, and produce HTML output.
+Bob also has the ability to run as a CGI program. It will automatically detect that it is running as a CGI program via the presence of CGI environment variables, and produce HTML output.
 
 I am working on support for running in the system tray via GTk+. This code is very much a work in progress. To activate it, run Bob with the -x argument.
 
