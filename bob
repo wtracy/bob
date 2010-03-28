@@ -84,15 +84,7 @@ class BobGtk:
       return gtk.main_quit()
 
    def contextMenu(self, icon, button, activate_time, data=None):
-       menu = gtk.Menu()
-
-       one = gtk.ImageMenuItem(gtk.STOCK_QUIT, "Quit")
-       one.connect('activate', self.quit)
-       menu.append(one)
-
-       menu.show_all()
-
-       menu.popup(None, None, gtk.status_icon_position_menu, button, activate_time, icon)
+       self.menu.popup(None, None, gtk.status_icon_position_menu, button, activate_time, icon)
        return True
 
    def timeout(self):
@@ -114,20 +106,51 @@ class BobGtk:
            ++index
        text = text.strip()
        self.tray.set_tooltip(text)
+       self.tray.set_blinking(not onAc(cables) and self.alert.get_active())
        return True
 
+   def alertToggled(self, alert):
+      config.set('alert', 'enabled', self.alert.get_active())
+      config.write(open(userConfigPath, 'w'))
+
    def __init__(self):
+       self.menu = gtk.Menu()
+       self.alert = gtk.CheckMenuItem('Alert on battery power')
+       self.alert.set_active(config.getboolean('alert', 'enabled'))
+       self.menu.append(self.alert)
+       self.alert.connect('toggled', self.alertToggled)
+       one = gtk.ImageMenuItem(gtk.STOCK_QUIT, "Quit")
+       one.connect('activate', self.quit)
+       self.menu.append(one)
+       self.menu.show_all()
+
        self.tray = gtk.StatusIcon()
        self.tray.set_from_file('plug.png')
-       #tray.set_from_file('laptop_battery.png')
-       #tray.set_blinking(True)
        self.tray.connect('popup-menu', self.contextMenu)
        gobject.timeout_add(1000, self.timeout)
+
+def getConfig():
+	import ConfigParser, os
+
+	config = ConfigParser.ConfigParser()
+	config.read(['/etc/bob.conf', userConfigPath])
+
+
+	if (not config.has_section('alert')):
+		config.add_section('alert')
+	if (not config.has_option('alert', 'enabled')):
+		config.set('alert', 'enabled', '0')
+	return config
+
 
 batteries = glob.glob('/sys/class/power_supply/BAT*')
 cables = glob.glob('/sys/class/power_supply/AC*')
 
+userConfigPath = os.path.expanduser('~/.bob.conf')
+
 if '-x' in sys.argv:
+	config = getConfig()
+
 	import pygtk
 	pygtk.require("2.0")
 	import gtk
