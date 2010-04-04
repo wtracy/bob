@@ -52,6 +52,7 @@ def timeout():
 
 
 def quit(param):
+	player.set_state(gst.STATE_NULL)
 	return gtk.main_quit()
 
 def getConfig():
