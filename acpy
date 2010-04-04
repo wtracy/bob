@@ -1,0 +1,54 @@
+#!/usr/bin/python
+
+import os, sys
+import acpi 
+
+
+if 'GATEWAY_INTERFACE' in os.environ.keys():
+	print 'Content-type: text/html\n'
+	print '<html><head><title>BOB: Power status for'
+	print os.environ.get('SERVER_NAME')
+	print '</title><meta http-equiv="refresh" content="30" /></head><body>'
+	#print '<table rules="rows" frame="box">'
+	print '<table>'
+	html = True
+else:
+	html = False
+index = 0
+for ac in acpi.getPowerSupplies():
+	status = ac.getStatus()
+	if html:
+		print '<tr><td align="right">AC Adapter ' + repr(index) + ': </td>'
+		if status == 'on-line':
+			print '<td bgcolor="00FF00">'
+		else:
+			print '<td bgcolor="FF0000"><b><blink>'
+	
+		print status 
+		if status != 'on-line':
+			print '</blink></b>'
+		print '</td></tr>'
+	else:
+		print '  AC Adapter' + (repr(index).rjust(2)) + ': ' + status
+	++index
+index = 0
+for bat in acpi.getBatteries():
+	status = bat.getStatus()
+	charge = bat.getCharge()
+	if html:
+		if charge > 75:
+			color = '#00FF00'
+		elif charge > 50:
+			color = '#FFFF00'
+		elif charge > 25:
+			color = '#FF8000'
+		else:
+			color = '#FF0000'
+		print '<tr><td align="right">Battery ' + repr(index) + ': </td><td bgcolor="' + color + '">' + status + ', ' + repr(charge) + '%</td></tr>'
+	else:
+		print '     Battery' + (repr(index).rjust(2)) + ': ' + status + ', ' + repr(charge) + '%'
+	#++index
+if html:
+	print '</table></body></html>'
+
+
