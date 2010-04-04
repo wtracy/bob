@@ -37,7 +37,7 @@ class Battery:
 	def __init__(self, path):
 		self.bat = path
 
-def onAc():
+def runningOnAcPower():
 	for ac in getPowerSupplies():
 		if (not ac.isOnline()):
 			return False
