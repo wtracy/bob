@@ -1,140 +1,58 @@
 #!/usr/bin/python
 
-import glob, os, sys
+import os, sys
+import acpi 
 
+import pygtk
+pygtk.require("2.0")
+import gtk
+import gobject
 
-def isOnline(ac):
-	online = open(ac + '/online', 'r').readline()
-	return online == '1\n'
+import pygst
+pygst.require("0.10")
+import gst
+import time
 
-def onAc(cables):
-	for ac in cables:
-		if (not isOnline(ac)):
-			return False
+def alertToggled(alert):
+	config.set('alert', 'enabled', alert.get_active())
+	config.write(open(userConfigPath, 'w'))
+
+def contextMenu(icon, button, activate_time, data=None):
+	menu.popup(None, None, gtk.status_icon_position_menu, button, activate_time, icon)
 	return True
 
-def getCharge(bat):
-	max = int(open(bat + '/charge_full', 'r').readline())
-	curr = int(open(bat + '/charge_now', 'r').readline())
-	charge = 100 * curr / max
-	return charge
-
-def getCableStatus(ac):
-	online = open(ac + '/online', 'r').readline()
-	if (online == '1\n'):
-		return 'on-line'
-	elif online == '0\n':
-		return 'off-line'
+def timeout():
+	if (acpi.onAc()):
+		tray.set_from_file('plug.png')
 	else:
-		return 'read error'
-
-def getBatteryStatus(bat):
-	return open(bat + '/status', 'r').readline().strip()
-
-def output():
-	if 'GATEWAY_INTERFACE' in os.environ.keys():
-		print 'Content-type: text/html\n'
-		print '<html><head><title>BOB: Power status for'
-		print os.environ.get('SERVER_NAME')
-		print '</title><meta http-equiv="refresh" content="30" /></head><body>'
-		#print '<table rules="rows" frame="box">'
-		print '<table>'
-		html = True
-	else:
-		html = False
+		tray.set_from_file('laptop_battery.png')
+	text = ''
 	index = 0
-	for ac in cables:
-		status = getCableStatus(ac)
-		if html:
-			print '<tr><td align="right">AC Adapter ' + repr(index) + ': </td>'
-			if status == 'on-line':
-				print '<td bgcolor="00FF00">'
-			else:
-				print '<td bgcolor="FF0000"><b><blink>'
-		
-			print status 
-			if status != 'on-line':
-				print '</blink></b>'
-			print '</td></tr>'
-		else:
-			print '  AC Adapter' + (repr(index).rjust(2)) + ': ' + status
+	for ac in acpi.getPowerSupplies():
+		status = ac.getStatus()
+		text += 'AC Adapter ' + (repr(index)) + ': ' + status + '\n'
 		++index
 	index = 0
-	for bat in batteries:
-		status = getBatteryStatus(bat)
-		charge = getCharge(bat)
-		if html:
-			if charge > 75:
-				color = '#00FF00'
-			elif charge > 50:
-				color = '#FFFF00'
-			elif charge > 25:
-				color = '#FF8000'
-			else:
-				color = '#FF0000'
-			print '<tr><td align="right">Battery ' + repr(index) + ': </td><td bgcolor="' + color + '">' + status + ', ' + repr(charge) + '%</td></tr>'
-		else:
-			print '     Battery' + (repr(index).rjust(2)) + ': ' + status + ', ' + repr(charge) + '%'
+	for bat in acpi.getBatteries():
+		status = bat.getStatus()
+		charge = bat.getCharge()
+		text += 'Battery ' + repr(index) + ': ' + status + ', ' + repr(charge) + '%\n'
 		++index
-	if html:
-		print '</table></body></html>'
+	text = text.strip()
+	tray.set_tooltip(text)
+	if (not acpi.onAc() and alert.get_active()):
+		tray.set_blinking(True)
+		if (player.get_state() != gst.STATE_PLAYING):
+			player.set_state(gst.STATE_PLAYING)
+	else:
+		tray.set_blinking(False)
+		player.set_state(gst.STATE_NULL)
 
-class BobGtk:
-   def quit(self, param):
-      return gtk.main_quit()
+	return True
 
-   def contextMenu(self, icon, button, activate_time, data=None):
-       self.menu.popup(None, None, gtk.status_icon_position_menu, button, activate_time, icon)
-       return True
 
-   def timeout(self):
-       if (onAc(cables)):
-           self.tray.set_from_file('plug.png')
-       else:
-           self.tray.set_from_file('laptop_battery.png')
-       text = ''
-       index = 0
-       for ac in cables:
-           status = getCableStatus(ac)
-           text += 'AC Adapter ' + (repr(index)) + ': ' + status + '\n'
-           ++index
-       index = 0
-       for bat in batteries:
-           status = getBatteryStatus(bat)
-           charge = getCharge(bat)
-           text += 'Battery ' + repr(index) + ': ' + status + ', ' + repr(charge) + '%\n'
-           ++index
-       text = text.strip()
-       self.tray.set_tooltip(text)
-       if (not onAc(cables) and self.alert.get_active()):
-         self.tray.set_blinking(True)
-         if (player.get_state() != gst.STATE_PLAYING):
-           player.set_state(gst.STATE_PLAYING)
-       else:
-         self.tray.set_blinking(False)
-         player.set_state(gst.STATE_NULL)
-
-       return True
-
-   def alertToggled(self, alert):
-      config.set('alert', 'enabled', self.alert.get_active())
-      config.write(open(userConfigPath, 'w'))
-
-   def __init__(self):
-       self.menu = gtk.Menu()
-       self.alert = gtk.CheckMenuItem('Alert on battery power')
-       self.alert.set_active(config.getboolean('alert', 'enabled'))
-       self.menu.append(self.alert)
-       self.alert.connect('toggled', self.alertToggled)
-       one = gtk.ImageMenuItem(gtk.STOCK_QUIT, "Quit")
-       one.connect('activate', self.quit)
-       self.menu.append(one)
-       self.menu.show_all()
-
-       self.tray = gtk.StatusIcon()
-       self.tray.set_from_file('plug.png')
-       self.tray.connect('popup-menu', self.contextMenu)
-       gobject.timeout_add(1000, self.timeout)
+def quit(param):
+	return gtk.main_quit()
 
 def getConfig():
 	import ConfigParser, os
@@ -158,35 +76,34 @@ def playerbinMessage(bus, message):
 	elif t == gst.MESSAGE_ERROR:
 		print "Gstreamer Error: %S" % err, debug
 
-batteries = glob.glob('/sys/class/power_supply/BAT*')
-cables = glob.glob('/sys/class/power_supply/AC*')
-
 userConfigPath = os.path.expanduser('~/.bob.conf')
 
-if '-x' in sys.argv:
-	config = getConfig()
+config = getConfig()
 
-	import pygtk
-	pygtk.require("2.0")
-	import gtk
-	import gobject
+menu = gtk.Menu()
+alert = gtk.CheckMenuItem('Alert on battery power')
+alert.set_active(config.getboolean('alert', 'enabled'))
+menu.append(alert)
+alert.connect('toggled', alertToggled)
+quitItem = gtk.ImageMenuItem(gtk.STOCK_QUIT, "Quit")
+quitItem.connect('activate', quit)
+menu.append(quitItem)
+menu.show_all()
 
-	bobgtk = BobGtk()
+tray = gtk.StatusIcon()
+tray.set_from_file('plug.png')
+tray.connect('popup-menu', contextMenu)
+gobject.timeout_add(1000, timeout)
 
-	import pygst
-	pygst.require("0.10")
-	import gst
-	import time
 
-	player = gst.element_factory_make("playbin2", "player")
-	fakesink = gst.element_factory_make("fakesink", "fakesink")
-	player.set_property("video-sink", fakesink)
-	player.set_property("uri", "file://" + os.path.abspath("alertloop.mp3"))
-	bus = player.get_bus()
-	bus.add_signal_watch()
-	bus.connect("message", playerbinMessage)
 
-	gtk.gdk.threads_init()
-	gtk.main()
-else:
-	output()
+player = gst.element_factory_make("playbin2", "player")
+fakesink = gst.element_factory_make("fakesink", "fakesink")
+player.set_property("video-sink", fakesink)
+player.set_property("uri", "file://" + os.path.abspath("alertloop.mp3"))
+bus = player.get_bus()
+bus.add_signal_watch()
+bus.connect("message", playerbinMessage)
+
+gtk.gdk.threads_init()
+gtk.main()

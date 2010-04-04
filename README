@@ -1,10 +1,10 @@
 BOB -- Beep On Battery
 
-Bob is an acpiclient replacement written in Python. It monitors the power left in your laptop battery, and whether your laptop is plugged in or not.
+This software package actually contains three components: a Python library for accessing ACPI (acpi.py); Acpy, a Python replacement for Acpiclient; and Bob, a GTk+ app that runs in your system tray and displays your battery status.
 
-If you run Bob normally with no arguments on a system with a Linux kernel exporting the /sys/class interface (older kernels using the /proc/acpi inteface are unsupported) you will see output that is mostly compatible with acpiclient.
+The underlying acpi library assumes a Linux kernel exporting the /sys/class interface; older kernels using the /proc/acpi interface are unsupported. BSD support is on the to-do list.
 
-Bob also has the ability to run as a CGI program. It will automatically detect that it is running as a CGI program via the presence of CGI environment variables, and produce HTML output.
+Acpy also has the ability to run as a CGI program. It will automatically detect that it is running as a CGI program via the presence of CGI environment variables, and produce HTML output.
 
-I am working on support for running in the system tray via GTk+. This code is very much a work in progress. To activate it, run Bob with the -x argument.
+Bob, the graphical component, is still very much under development. In particular, be aware that activating the 'alert' feature may cause crashes.
 
