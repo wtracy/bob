@@ -13,19 +13,17 @@ pygst.require("0.10")
 import gst
 import time
 
+# The alert option has been turned on or off via the menu
 def alertToggled(alert):
 	config.set('alert', 'enabled', alert.get_active())
 	config.write(open(userConfigPath, 'w'))
 
-def contextMenu(icon, button, activate_time, data=None):
+def showContextMenu(icon, button, activate_time, data=None):
 	menu.popup(None, None, gtk.status_icon_position_menu, button, activate_time, icon)
 	return True
 
+# Called every second to poll acpi
 def timeout():
-	if (acpi.onAc()):
-		tray.set_from_file('plug.png')
-	else:
-		tray.set_from_file('laptop_battery.png')
 	text = ''
 	index = 0
 	for ac in acpi.getPowerSupplies():
@@ -40,7 +38,13 @@ def timeout():
 		++index
 	text = text.strip()
 	tray.set_tooltip(text)
-	if (not acpi.onAc() and alert.get_active()):
+
+	onAc = acpi.runningOnAcPower()
+	if (onAc):
+		tray.set_from_file('plug.png')
+	else:
+		tray.set_from_file('laptop_battery.png')
+	if (not onAc and alert.get_active()):
 		tray.set_blinking(True)
 		if (player.get_state() != gst.STATE_PLAYING):
 			player.set_state(gst.STATE_PLAYING)
@@ -49,7 +53,6 @@ def timeout():
 		player.set_state(gst.STATE_NULL)
 
 	return True
-
 
 def quit(param):
 	player.set_state(gst.STATE_NULL)
@@ -61,24 +64,27 @@ def getConfig():
 	config = ConfigParser.ConfigParser()
 	config.read(['/etc/bob.conf', userConfigPath])
 
-
 	if (not config.has_section('alert')):
 		config.add_section('alert')
 	if (not config.has_option('alert', 'enabled')):
 		config.set('alert', 'enabled', '0')
 	return config
 
+# Gstreamer callback
 def playerbinMessage(bus, message):
 	t = message.type
 	if t == gst.MESSAGE_EOS:
 		player.set_state(gst.STATE_NULL)
-		time.sleep(0.1)
 		player.set_state(gst.STATE_PLAYING)
 	elif t == gst.MESSAGE_ERROR:
 		print "Gstreamer Error: %S" % err, debug
 
-userConfigPath = os.path.expanduser('~/.bob.conf')
+# END function definitions
 
+
+
+
+userConfigPath = os.path.expanduser('~/.bob.conf')
 config = getConfig()
 
 menu = gtk.Menu()
@@ -93,10 +99,9 @@ menu.show_all()
 
 tray = gtk.StatusIcon()
 tray.set_from_file('plug.png')
-tray.connect('popup-menu', contextMenu)
+tray.connect('popup-menu', showContextMenu)
+
 gobject.timeout_add(1000, timeout)
-
-
 
 player = gst.element_factory_make("playbin2", "player")
 fakesink = gst.element_factory_make("fakesink", "fakesink")
