@@ -22,6 +22,10 @@ def showContextMenu(icon, button, activate_time, data=None):
 	menu.popup(None, None, gtk.status_icon_position_menu, button, activate_time, icon)
 	return True
 
+def start(player):
+	player.set_property("uri", audio_uri)
+	player.set_state(gst.STATE_PLAYING)
+
 # Called every second to poll acpi
 def timeout():
 	text = ''
@@ -46,8 +50,8 @@ def timeout():
 		tray.set_from_file('laptop_battery.png')
 	if (not onAc and alert.get_active()):
 		tray.set_blinking(True)
-		if (player.get_state() != gst.STATE_PLAYING):
-			player.set_state(gst.STATE_PLAYING)
+		if (player.get_state()[1] == gst.STATE_NULL):
+			start(player)
 	else:
 		tray.set_blinking(False)
 		player.set_state(gst.STATE_NULL)
@@ -74,8 +78,7 @@ def getConfig():
 def playerbinMessage(bus, message):
 	t = message.type
 	if t == gst.MESSAGE_EOS:
-		player.set_state(gst.STATE_NULL)
-		player.set_state(gst.STATE_PLAYING)
+		player.seek_simple(time_format, gst.SEEK_FLAG_FLUSH, 0)
 	elif t == gst.MESSAGE_ERROR:
 		print "Gstreamer Error: %S" % err, debug
 
@@ -103,13 +106,15 @@ tray.connect('popup-menu', showContextMenu)
 
 gobject.timeout_add(1000, timeout)
 
+audio_uri = "file://" + os.path.abspath("alert.ogg")
+
 player = gst.element_factory_make("playbin2", "player")
 fakesink = gst.element_factory_make("fakesink", "fakesink")
 player.set_property("video-sink", fakesink)
-player.set_property("uri", "file://" + os.path.abspath("alertloop.mp3"))
 bus = player.get_bus()
 bus.add_signal_watch()
 bus.connect("message", playerbinMessage)
+time_format = gst.Format(gst.FORMAT_TIME)
 
 gtk.gdk.threads_init()
 gtk.main()
