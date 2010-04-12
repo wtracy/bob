@@ -1,6 +1,6 @@
 BOB -- Beep On Battery
 
-This software package actually contains three components: a Python library for accessing ACPI (acpi.py); Acpy, a Python replacement for Acpiclient; and Bob, a GTk+ app that runs in your system tray and displays your battery status.
+This software package actually contains four components: a Python library for accessing ACPI (acpi.py); Acpy, a Python replacement for Acpiclient; Acpyd, a daemon that plays an alert whenever you are running on battery power; and Bob, a GTk+ app that runs in your system tray and displays your battery status.
 
 The underlying acpi library assumes a Linux kernel exporting the /sys/class interface; older kernels using the /proc/acpi interface are unsupported. BSD support is on the to-do list.
 
