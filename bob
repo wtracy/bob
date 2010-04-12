@@ -91,7 +91,7 @@ userConfigPath = os.path.expanduser('~/.bob.conf')
 config = getConfig()
 
 menu = gtk.Menu()
-alert = gtk.CheckMenuItem('Alert on battery power')
+alert = gtk.CheckMenuItem('Alert on battery power (buggy)')
 alert.set_active(config.getboolean('alert', 'enabled'))
 menu.append(alert)
 alert.connect('toggled', alertToggled)
