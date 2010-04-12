@@ -1,0 +1,11 @@
+#!/usr/bin/python
+
+import os, sys
+import acpi 
+import time
+
+while True:
+	if acpi.runningOnAcPower():
+		time.sleep(1)
+	else:
+		os.system('ogg123 alert.ogg')
